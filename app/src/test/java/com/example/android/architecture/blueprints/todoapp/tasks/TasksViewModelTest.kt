@@ -1,74 +1,80 @@
+/*
+ * Copyright (C) 2019 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.example.android.architecture.blueprints.todoapp.tasks
 
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
-import androidx.test.core.app.ApplicationProvider
-import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.example.android.architecture.blueprints.todoapp.data.Task
+import com.example.android.architecture.blueprints.todoapp.data.source.FakeTestRepository
 import com.example.android.architecture.blueprints.todoapp.getOrAwaitValue
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.hamcrest.CoreMatchers.*
-import org.junit.Assert.assertThat
+import org.hamcrest.MatcherAssert.assertThat
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
-import org.junit.runner.RunWith
 
-// DONE Step 6.5 Add the AndoirdJUnit4 test runner:
-@RunWith(AndroidJUnit4::class)
+
+/**
+ * Unit tests for the implementation of [TasksViewModel]
+ */
+@ExperimentalCoroutinesApi
 class TasksViewModelTest {
 
-    // DONE Step 10.0: Create a lateinit instance variable called tasksViewModel
-    private lateinit var taskViewModel: TasksViewModel
+    // Subject under test
+    private lateinit var tasksViewModel: TasksViewModel
 
-    // DONE Step 10.1 Create a method called setupViewModel and annotate it with @Before
+    // Use a fake repository to be injected into the viewmodel
+    private lateinit var tasksRepository: FakeTestRepository
+
+    // Executes each task synchronously using Architecture Components.
+    @get:Rule
+    var instantExecutorRule = InstantTaskExecutorRule()
+
     @Before
-    fun setUpViewModel() {
-        // DONE Step 10.2 Move the view model instantiation code to setupViewModel
-        taskViewModel = TasksViewModel(ApplicationProvider.getApplicationContext())
+    fun setupViewModel() {
+        // We initialise the tasks to 3, with one active and two completed
+        tasksRepository = FakeTestRepository()
+        val task1 = Task("Title1", "Description1")
+        val task2 = Task("Title2", "Description2", true)
+        val task3 = Task("Title3", "Description3", true)
+        tasksRepository.addTasks(task1, task2, task3)
+
+        tasksViewModel = TasksViewModel(tasksRepository)
     }
 
-    // DONE Step 8.1 create a variable from InstantTaskExecutorRule
-    @get:Rule
-    var instantTaskExecutorRule = InstantTaskExecutorRule()
-
-    // DONE Step 8.2 make a new Kotlin file called LiveDataTestUtil.kt in your test source set
-    // DONE Step 8.3 Copy and paste the provided code
-    //  NOTE for full explanatioon follow the link https://medium.com/androiddevelopers/unit-testing-livedata-and-other-common-observability-problems-bb477262eb04
-
-    // DONE Step 6.1: Create a new test called addNewTask_setsNewTaskEvent:
     @Test
     fun addNewTask_setsNewTaskEvent() {
-        // Given a fresh TasksViewModel
-        // DONE Step 6.3 Create a TasksViewModel using ApplicationProvider.getApplicationContext() from the AndroidX test library
-//        val taskViewModel = TasksViewModel(ApplicationProvider.getApplicationContext())
-
-
         // When adding a new task
-        // DONE Step 6.4 add a new task
-        taskViewModel.addNewTask()
+        tasksViewModel.addNewTask()
 
         // Then the new task event is triggered
-        // DONE Step 8.4 Get the LiveData value for newTaskEvent using getOrAwaitValue
-        val value = taskViewModel.newTaskEvent.getOrAwaitValue()
+        val value = tasksViewModel.newTaskEvent.getOrAwaitValue()
 
-        // DONE Step 8.5 Assert that the value is not null:
-        assertThat(value.getContentIfNotHandled(), (not(nullValue())))
+        assertThat(value.getContentIfNotHandled(), not(nullValue()))
 
     }
 
-    // DONE Step 9: Write your own ViewModel test
-    //  write a test called setFilterAllTasks_tasksAddViewVisible() that:
-    //  - Sets the filtering mode to TasksFilterType.ALL_TASKS
-    //  - Assets that the tasksAddViewVisible LiveData is true
     @Test
     fun setFilterAllTasks_tasksAddViewVisible() {
-        // Given a fresh ViewModel
-//        val tasksViewModel = TasksViewModel(ApplicationProvider.getApplicationContext())
-
         // When the filter type is ALL_TASKS
-        taskViewModel.setFiltering(TasksFilterType.ALL_TASKS)
+        tasksViewModel.setFiltering(TasksFilterType.ALL_TASKS)
 
         // Then the "Add task" action is visible
-        val tasksAddViewVisible = taskViewModel.tasksAddViewVisible.getOrAwaitValue()
-        assertThat(tasksAddViewVisible, `is`(true))
-
+        assertThat(tasksViewModel.tasksAddViewVisible.getOrAwaitValue(), `is`(true))
     }
+
 }
